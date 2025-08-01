@@ -1,36 +1,45 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ANSYS Software Downloads</title>
   <style>
     body {
       font-family: Arial, sans-serif;
+      background: #f9f9f9;
       margin: 2rem;
-      background-color: #f9f9f9;
     }
     h1 {
       color: #004080;
     }
-    select {
+    .banner {
+      background: #ffeeba;
+      border: 1px solid #f0ad4e;
+      padding: 10px;
+      margin-bottom: 15px;
+      font-weight: bold;
+    }
+    select, input[type="text"] {
       padding: 6px;
       margin-right: 10px;
     }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 1rem;
-    }
-    th, td {
+    .category {
+      margin-top: 2rem;
+      padding: 1rem;
+      background: #fff;
       border: 1px solid #ccc;
-      padding: 10px;
+      border-radius: 8px;
     }
-    th {
-      background-color: #f0f0f0;
+    .category h2 {
+      margin-top: 0;
+      color: #333;
     }
-    .hidden {
-      display: none;
+    ul.file-list {
+      list-style: none;
+      padding-left: 0;
+    }
+    ul.file-list li {
+      margin: 0.5rem 0;
     }
     .download-link {
       color: #0066cc;
@@ -39,110 +48,138 @@
     .download-link:hover {
       text-decoration: underline;
     }
+    .download-header::before {
+      content: "\1F4E5 "; /* download icon emoji before the word Download */
+    }
   </style>
 </head>
 <body>
-  <h1>ANSYS Software Downloads</h1>
-
+  <h1><span class="download-header"></span>ANSYS Software Downloads</h1>
+  <div class="banner">
+    🔍 Please select <strong>Version</strong> and <strong>OS</strong> to view download categories and search by filename.
+  </div>
   <div>
     <label for="versionFilter">Version:</label>
     <select id="versionFilter">
-      <option value="">All</option>
+      <option value="">-- Select Version --</option>
     </select>
-
     <label for="osFilter">OS:</label>
     <select id="osFilter">
-      <option value="">All</option>
+      <option value="">-- Select OS --</option>
     </select>
-  </div>
-
-  <table id="fileTable">
-    <thead>
-      <tr>
-        <th>File Name</th>
-        <th>Version</th>
-        <th>OS</th>
-        <th>Download</th>
-      </tr>
-    </thead>
-    <tbody>
-      <!-- Rows inserted dynamically -->
-    </tbody>
-  </table>
-
-  <script>
+    <label for="searchInput">Search:</label>
+    <input type="text" id="searchInput" placeholder="Search by file name">
+  </div>  <div id="fileContainer"></div>  <script>
     const JSON_URL = "https://script.google.com/macros/s/AKfycbylJt3kbvwBBf5cgILgEftSq3ohUPMD-GzEnvjqzxD3ganeTev1TtNQW9nELHrBQrMS/exec";
-
     let fileData = [];
 
+    // Define category names and matching regex patterns
+    const categories = {
+      "Structures": [/structure/i],
+      "Fluids": [/fluent|cfx|fluids/i],
+      "Electronics": [/electronic|motor-cad|siwave/i],
+      "Materials": [/granta|mi/i],
+      "Acoustics": [/sound|sas|asdr/i],
+      "Optical": [/speos/i],
+      "Discovery": [/discovery/i],
+      "Forming": [/forming/i],
+      "PrepPost": [/preppost/i],
+      "Photonics": [/lumercal|photonics/i],
+    };
+
+    // Fetch JSON from Apps Script endpoint
     async function loadJSON() {
       try {
         const res = await fetch(JSON_URL);
         fileData = await res.json();
         populateFilters();
-        renderTable();
       } catch (err) {
-        console.error("Failed to load JSON:", err);
-        alert("Failed to load data. Please try again later.");
+        alert("Failed to load data.");
+        console.error(err);
       }
     }
 
+    // Populate version and OS filters based on data
     function populateFilters() {
       const versionSet = new Set();
-      const osSet = new Set();
-
       fileData.forEach(file => {
         if (file.version) versionSet.add(file.version);
-        if (file.os) osSet.add(file.os);
       });
 
-      const versionSelect = document.getElementById("versionFilter");
-      versionSet.forEach(version => {
+      // Populate version dropdown alphabetically
+      [...versionSet].sort().forEach(version => {
         const opt = document.createElement("option");
         opt.value = version;
         opt.textContent = version;
-        versionSelect.appendChild(opt);
+        document.getElementById("versionFilter").appendChild(opt);
       });
 
-      const osSelect = document.getElementById("osFilter");
-      osSet.forEach(os => {
+      // Only show Windows and Linux as OS options
+      ["Windows", "Linux"].forEach(os => {
         const opt = document.createElement("option");
         opt.value = os;
         opt.textContent = os;
-        osSelect.appendChild(opt);
+        document.getElementById("osFilter").appendChild(opt);
       });
 
-      versionSelect.addEventListener("change", renderTable);
-      osSelect.addEventListener("change", renderTable);
+      // Attach event listeners to filters and search box
+      document.getElementById("versionFilter").addEventListener("change", renderFiles);
+      document.getElementById("osFilter").addEventListener("change", renderFiles);
+      document.getElementById("searchInput").addEventListener("input", renderFiles);
     }
 
-    function renderTable() {
+    // Categorize a file based on matching pattern in its name
+    function categorize(file) {
+      for (const [cat, patterns] of Object.entries(categories)) {
+        if (patterns.some(p => p.test(file.name))) return cat;
+      }
+      return "Other"; // fallback category if no match
+    }
+
+    // Render the filtered and categorized file list
+    function renderFiles() {
       const version = document.getElementById("versionFilter").value;
       const os = document.getElementById("osFilter").value;
+      const search = document.getElementById("searchInput").value.toLowerCase();
+      const container = document.getElementById("fileContainer");
+      container.innerHTML = ""; // clear existing content
 
-      const tbody = document.querySelector("#fileTable tbody");
-      tbody.innerHTML = "";
+      // Require both filters to be selected before showing anything
+      if (!version || !os) return;
 
-      const filtered = fileData.filter(file => {
-        return (!version || file.version === version) &&
-               (!os || file.os === os);
-      });
+      // Filter and sort the data
+      const filtered = fileData.filter(file =>
+        file.version === version &&
+        file.os === os &&
+        file.name.toLowerCase().includes(search)
+      ).sort((a, b) => a.name.localeCompare(b.name));
 
+      // Group filtered files by category
+      const grouped = {};
       filtered.forEach(file => {
-        const row = document.createElement("tr");
-
-        row.innerHTML = `
-          <td>${file.name}</td>
-          <td>${file.version || "-"}</td>
-          <td>${file.os || "-"}</td>
-          <td><a href="${file.url}" class="download-link" target="_blank">Download</a></td>
-        `;
-
-        tbody.appendChild(row);
+        const cat = categorize(file);
+        if (!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push(file);
       });
+
+      // Render each category section with its files
+      for (const [category, files] of Object.entries(grouped)) {
+        const section = document.createElement("div");
+        section.className = "category";
+        section.innerHTML = `<h2>${category}</h2><ul class="file-list"></ul>`;
+
+        const list = section.querySelector(".file-list");
+        files.forEach(file => {
+          const li = document.createElement("li");
+          li.innerHTML = `<a href="${file.url}" target="_blank" class="download-link">${file.name}</a>`;
+          list.appendChild(li);
+        });
+
+        container.appendChild(section);
+      }
     }
 
+    // Initial call to load JSON data
     loadJSON();
-  </script>
-</body>
+  </script></body>
 </html>
