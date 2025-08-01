@@ -1,0 +1,136 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ANSYS Software Downloads</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 1rem; background-color: #f9f9f9; }
+    h1 { color: #003366; display: flex; align-items: center; gap: 0.5rem; }
+    .banner {
+      background:#e0f3ff; padding: 1rem; border-left: 5px solid #0078d4; margin: 1rem 0;
+    }
+    .filters { margin: 1rem 0; }
+    select { padding: 0.5rem; margin-right: 1rem; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; background: white; }
+    th, td { padding: 0.75rem; border: 1px solid #ccc; text-align: left; }
+    th { background-color: #003366; color: white; }
+    .folder-link { color: #0066cc; cursor: pointer; text-decoration: underline; }
+    #breadcrumbs { margin: 0.5rem 0; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <h1><img src="https://img.icons8.com/ios-filled/24/download--v1.png" alt="Download" />ANSYS Software Downloads</h1>
+  <div class="banner">
+    Please choose the relevant <strong>Version</strong> and <strong>OS</strong> from the filters below to view available ANSYS software downloads.
+  </div>
+  <div class="filters">
+    <label for="versionFilter">Version:</label>
+    <select id="versionFilter"><option value="">All</option></select>
+    <label for="osFilter">OS:</label>
+    <select id="osFilter"><option value="">All</option></select>
+  </div>
+  <div id="breadcrumbs"></div>
+  <table id="fileTable">
+    <thead><tr><th>Name</th><th>Action</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const dataUrl = 'https://drive.google.com/uc?export=download&id=1rGTfwWCAZAIlcP18EKtuLd9ixUMCfyu1';
+    let data = {};
+    let currentPath = [];
+
+    function fetchData() {
+      fetch(dataUrl)
+        .then(res => res.json())
+        .then(json => {
+          data = json;
+          populateFilters();
+          renderTable(data, []);
+        })
+        .catch(err => {
+          document.querySelector('#fileTable tbody').innerHTML = '<tr><td colspan="2">Failed to load data</td></tr>';
+          console.error(err);
+        });
+    }
+
+    function populateFilters() {
+      const versions = new Set(), osList = new Set();
+      const scan = (item) => {
+        if (item.version) versions.add(item.version);
+        if (item.os) osList.add(item.os);
+        if (item.items) item.items.forEach(scan);
+      };
+      scan(data);
+
+      const versionSelect = document.getElementById('versionFilter');
+      const osSelect = document.getElementById('osFilter');
+      versions.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v; opt.textContent = v;
+        versionSelect.appendChild(opt);
+      });
+      osList.forEach(o => {
+        const opt = document.createElement('option');
+        opt.value = o; opt.textContent = o;
+        osSelect.appendChild(opt);
+      });
+
+      versionSelect.onchange = () => renderTable(data, []);
+      osSelect.onchange = () => renderTable(data, []);
+    }
+
+    function renderTable(folder, path) {
+      const version = document.getElementById('versionFilter').value;
+      const os = document.getElementById('osFilter').value;
+      const tbody = document.querySelector('#fileTable tbody');
+      const breadcrumbs = document.getElementById('breadcrumbs');
+      breadcrumbs.innerHTML = path.map((p, i) =>
+        `<span class="folder-link" onclick="navigate(${i})">${p}</span>`
+      ).join(" / ");
+
+      tbody.innerHTML = '';
+      folder.items?.forEach(item => {
+        const tr = document.createElement('tr');
+        if (item.items) {
+          const td = document.createElement('td');
+          td.colSpan = 2;
+          td.innerHTML = `<span class="folder-link" onclick="enter('${item.name}', ${JSON.stringify(path)})">📁 ${item.name}</span>`;
+          tr.appendChild(td);
+          tbody.appendChild(tr);
+        } else if ((!version || item.version === version) && (!os || item.os === os)) {
+          tr.innerHTML = `
+            <td>${item.name}</td>
+            <td>
+              <a href="${item.downloadUrl}" target="_blank">Download</a> |
+              <a href="${item.viewUrl}" target="_blank">View</a>
+            </td>`;
+          tbody.appendChild(tr);
+        }
+      });
+
+      currentPath = path;
+    }
+
+    function enter(name, path) {
+      let ref = data;
+      [...path, name].forEach(p => {
+        ref = ref.items.find(x => x.name === p);
+      });
+      renderTable(ref, [...path, name]);
+    }
+
+    function navigate(level) {
+      let ref = data;
+      for (let i = 0; i <= level; i++) {
+        ref = ref.items.find(x => x.name === currentPath[i]);
+      }
+      renderTable(ref, currentPath.slice(0, level + 1));
+    }
+
+    fetchData();
+  </script>
+</body>
+</html>
