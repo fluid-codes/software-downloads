@@ -22,7 +22,7 @@ flowchart TD
 
 ### 1. **Google Drive**
 - Hosts the actual ANSYS software files and folders.
-- A JSON file (`data.json`) is also stored here and updated daily.
+- A JSON file (`ansys_data.json`) is also stored here and updated daily.
 
 ### 2. **Google Apps Script**
 - **Automation Script**: Runs daily (or manually) to scan Drive and generate the latest JSON file.
@@ -44,7 +44,7 @@ flowchart TD
 
 - `index.html`: Front-end HTML with filters, error handling, and table layout
 - `README.md`: This file
-- `data.json`: Automatically generated (not in repo, but served via Apps Script)
+- `ansys_data.json`: Automatically generated (not in repo, but served via Apps Script)
 
 ---
 
