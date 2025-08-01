@@ -2,135 +2,127 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
   <title>ANSYS Software Downloads</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 1rem; background-color: #f9f9f9; }
-    h1 { color: #003366; display: flex; align-items: center; gap: 0.5rem; }
-    .banner {
-      background:#e0f3ff; padding: 1rem; border-left: 5px solid #0078d4; margin: 1rem 0;
-    }
-    .filters { margin: 1rem 0; }
-    select { padding: 0.5rem; margin-right: 1rem; }
-    table { width: 100%; border-collapse: collapse; margin-top: 1rem; background: white; }
-    th, td { padding: 0.75rem; border: 1px solid #ccc; text-align: left; }
-    th { background-color: #003366; color: white; }
-    .folder-link { color: #0066cc; cursor: pointer; text-decoration: underline; }
-    #breadcrumbs { margin: 0.5rem 0; font-size: 0.9rem; }
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+    th, td { border: 1px solid #ddd; padding: 8px; }
+    th { background-color: #f2f2f2; }
+    select { margin-right: 10px; }
+    #error-message { color: red; display: none; }
   </style>
 </head>
 <body>
-  <h1><img src="https://img.icons8.com/ios-filled/24/download--v1.png" alt="Download" />ANSYS Software Downloads</h1>
-  <div class="banner">
-    Please choose the relevant <strong>Version</strong> and <strong>OS</strong> from the filters below to view available ANSYS software downloads.
+
+  <h2>🔽 ANSYS Software Downloads</h2>
+
+  <div>
+    <label>Version:
+      <select id="versionFilter">
+        <option value="">All</option>
+      </select>
+    </label>
+
+    <label>OS:
+      <select id="osFilter">
+        <option value="">All</option>
+      </select>
+    </label>
   </div>
-  <div class="filters">
-    <label for="versionFilter">Version:</label>
-    <select id="versionFilter"><option value="">All</option></select>
-    <label for="osFilter">OS:</label>
-    <select id="osFilter"><option value="">All</option></select>
-  </div>
-  <div id="breadcrumbs"></div>
+
+  <div id="error-message">⚠️ Could not load file list. Please check your access or try again later.</div>
+
   <table id="fileTable">
-    <thead><tr><th>Name</th><th>Action</th></tr></thead>
+    <thead>
+      <tr>
+        <th>File Name</th>
+        <th>Version</th>
+        <th>OS</th>
+        <th>Download</th>
+      </tr>
+    </thead>
     <tbody></tbody>
   </table>
 
   <script>
-    const dataUrl = 'https://drive.google.com/uc?export=download&id=1rGTfwWCAZAIlcP18EKtuLd9ixUMCfyu1';
-    let data = {};
-    let currentPath = [];
+    const JSON_URL = "https://script.google.com/macros/s/AKfycbylJt3kbvwBBf5cgILgEftSq3ohUPMD-GzEnvjqzxD3ganeTev1TtNQW9nELHrBQrMS/exec";
 
-    function fetchData() {
-      fetch(dataUrl)
-        .then(res => res.json())
-        .then(json => {
-          data = json;
-          populateFilters();
-          renderTable(data, []);
-        })
-        .catch(err => {
-          document.querySelector('#fileTable tbody').innerHTML = '<tr><td colspan="2">Failed to load data</td></tr>';
-          console.error(err);
-        });
+    let allFiles = [];
+
+    function renderTable(filteredFiles) {
+      const tbody = document.querySelector("#fileTable tbody");
+      tbody.innerHTML = "";
+
+      filteredFiles.forEach(file => {
+        const row = document.createElement("tr");
+
+        row.innerHTML = `
+          <td>${file.name}</td>
+          <td>${file.version}</td>
+          <td>${file.os}</td>
+          <td><a href="${file.url}" target="_blank">Download</a></td>
+        `;
+
+        tbody.appendChild(row);
+      });
     }
 
-    function populateFilters() {
-      const versions = new Set(), osList = new Set();
-      const scan = (item) => {
-        if (item.version) versions.add(item.version);
-        if (item.os) osList.add(item.os);
-        if (item.items) item.items.forEach(scan);
-      };
-      scan(data);
+    function populateFilters(files) {
+      const versionSet = new Set();
+      const osSet = new Set();
 
-      const versionSelect = document.getElementById('versionFilter');
-      const osSelect = document.getElementById('osFilter');
-      versions.forEach(v => {
-        const opt = document.createElement('option');
-        opt.value = v; opt.textContent = v;
+      files.forEach(file => {
+        versionSet.add(file.version);
+        osSet.add(file.os);
+      });
+
+      const versionSelect = document.getElementById("versionFilter");
+      const osSelect = document.getElementById("osFilter");
+
+      versionSet.forEach(version => {
+        const opt = document.createElement("option");
+        opt.value = version;
+        opt.textContent = version;
         versionSelect.appendChild(opt);
       });
-      osList.forEach(o => {
-        const opt = document.createElement('option');
-        opt.value = o; opt.textContent = o;
+
+      osSet.forEach(os => {
+        const opt = document.createElement("option");
+        opt.value = os;
+        opt.textContent = os;
         osSelect.appendChild(opt);
       });
-
-      versionSelect.onchange = () => renderTable(data, []);
-      osSelect.onchange = () => renderTable(data, []);
     }
 
-    function renderTable(folder, path) {
-      const version = document.getElementById('versionFilter').value;
-      const os = document.getElementById('osFilter').value;
-      const tbody = document.querySelector('#fileTable tbody');
-      const breadcrumbs = document.getElementById('breadcrumbs');
-      breadcrumbs.innerHTML = path.map((p, i) =>
-        `<span class="folder-link" onclick="navigate(${i})">${p}</span>`
-      ).join(" / ");
+    function applyFilters() {
+      const selectedVersion = document.getElementById("versionFilter").value;
+      const selectedOS = document.getElementById("osFilter").value;
 
-      tbody.innerHTML = '';
-      folder.items?.forEach(item => {
-        const tr = document.createElement('tr');
-        if (item.items) {
-          const td = document.createElement('td');
-          td.colSpan = 2;
-          td.innerHTML = `<span class="folder-link" onclick="enter('${item.name}', ${JSON.stringify(path)})">📁 ${item.name}</span>`;
-          tr.appendChild(td);
-          tbody.appendChild(tr);
-        } else if ((!version || item.version === version) && (!os || item.os === os)) {
-          tr.innerHTML = `
-            <td>${item.name}</td>
-            <td>
-              <a href="${item.downloadUrl}" target="_blank">Download</a> |
-              <a href="${item.viewUrl}" target="_blank">View</a>
-            </td>`;
-          tbody.appendChild(tr);
-        }
+      const filtered = allFiles.filter(file => {
+        return (!selectedVersion || file.version === selectedVersion) &&
+               (!selectedOS || file.os === selectedOS);
       });
 
-      currentPath = path;
+      renderTable(filtered);
     }
 
-    function enter(name, path) {
-      let ref = data;
-      [...path, name].forEach(p => {
-        ref = ref.items.find(x => x.name === p);
+    document.getElementById("versionFilter").addEventListener("change", applyFilters);
+    document.getElementById("osFilter").addEventListener("change", applyFilters);
+
+    // Fetch JSON
+    fetch(JSON_URL)
+      .then(response => response.json())
+      .then(data => {
+        allFiles = data;
+        populateFilters(allFiles);
+        renderTable(allFiles);
+      })
+      .catch(error => {
+        console.error("Error fetching JSON:", error);
+        document.getElementById("error-message").style.display = "block";
       });
-      renderTable(ref, [...path, name]);
-    }
-
-    function navigate(level) {
-      let ref = data;
-      for (let i = 0; i <= level; i++) {
-        ref = ref.items.find(x => x.name === currentPath[i]);
-      }
-      renderTable(ref, currentPath.slice(0, level + 1));
-    }
-
-    fetchData();
   </script>
+
 </body>
 </html>
