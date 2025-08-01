@@ -1,5 +1,5 @@
 
-# ANSYS Software Downloads Portal
+# Software Downloads Portal
 
 This project provides a lightweight, filterable download interface for ANSYS software and installation files, hosted on GitHub Pages and backed by a JSON file served via Google Apps Script from Google Drive.
 
