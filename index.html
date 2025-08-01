@@ -1,37 +1,60 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>ANSYS Software Downloads</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
-    th, td { border: 1px solid #ddd; padding: 8px; }
-    th { background-color: #f2f2f2; }
-    select { margin-right: 10px; }
-    #error-message { color: red; display: none; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 2rem;
+      background-color: #f9f9f9;
+    }
+    h1 {
+      color: #004080;
+    }
+    select {
+      padding: 6px;
+      margin-right: 10px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+    }
+    th {
+      background-color: #f0f0f0;
+    }
+    .hidden {
+      display: none;
+    }
+    .download-link {
+      color: #0066cc;
+      text-decoration: none;
+    }
+    .download-link:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
-
-  <h2>🔽 ANSYS Software Downloads</h2>
+  <h1>ANSYS Software Downloads</h1>
 
   <div>
-    <label>Version:
-      <select id="versionFilter">
-        <option value="">All</option>
-      </select>
-    </label>
+    <label for="versionFilter">Version:</label>
+    <select id="versionFilter">
+      <option value="">All</option>
+    </select>
 
-    <label>OS:
-      <select id="osFilter">
-        <option value="">All</option>
-      </select>
-    </label>
+    <label for="osFilter">OS:</label>
+    <select id="osFilter">
+      <option value="">All</option>
+    </select>
   </div>
-
-  <div id="error-message">⚠️ Could not load file list. Please check your access or try again later.</div>
 
   <table id="fileTable">
     <thead>
@@ -42,44 +65,38 @@
         <th>Download</th>
       </tr>
     </thead>
-    <tbody></tbody>
+    <tbody>
+      <!-- Rows inserted dynamically -->
+    </tbody>
   </table>
 
   <script>
-    const JSON_URL = "https://drive.google.com/uc?id=1d0Nv4bq60AFGRWhIQ5OKHBK52Ud8MrM8&export=download";
+    const JSON_URL = "https://script.google.com/macros/s/AKfycbylJt3kbvwBBf5cgILgEftSq3ohUPMD-GzEnvjqzxD3ganeTev1TtNQW9nELHrBQrMS/exec";
 
-    let allFiles = [];
+    let fileData = [];
 
-    function renderTable(filteredFiles) {
-      const tbody = document.querySelector("#fileTable tbody");
-      tbody.innerHTML = "";
-
-      filteredFiles.forEach(file => {
-        const row = document.createElement("tr");
-
-        row.innerHTML = `
-          <td>${file.name}</td>
-          <td>${file.version}</td>
-          <td>${file.os}</td>
-          <td><a href="${file.url}" target="_blank">Download</a></td>
-        `;
-
-        tbody.appendChild(row);
-      });
+    async function loadJSON() {
+      try {
+        const res = await fetch(JSON_URL);
+        fileData = await res.json();
+        populateFilters();
+        renderTable();
+      } catch (err) {
+        console.error("Failed to load JSON:", err);
+        alert("Failed to load data. Please try again later.");
+      }
     }
 
-    function populateFilters(files) {
+    function populateFilters() {
       const versionSet = new Set();
       const osSet = new Set();
 
-      files.forEach(file => {
-        versionSet.add(file.version);
-        osSet.add(file.os);
+      fileData.forEach(file => {
+        if (file.version) versionSet.add(file.version);
+        if (file.os) osSet.add(file.os);
       });
 
       const versionSelect = document.getElementById("versionFilter");
-      const osSelect = document.getElementById("osFilter");
-
       versionSet.forEach(version => {
         const opt = document.createElement("option");
         opt.value = version;
@@ -87,42 +104,45 @@
         versionSelect.appendChild(opt);
       });
 
+      const osSelect = document.getElementById("osFilter");
       osSet.forEach(os => {
         const opt = document.createElement("option");
         opt.value = os;
         opt.textContent = os;
         osSelect.appendChild(opt);
       });
+
+      versionSelect.addEventListener("change", renderTable);
+      osSelect.addEventListener("change", renderTable);
     }
 
-    function applyFilters() {
-      const selectedVersion = document.getElementById("versionFilter").value;
-      const selectedOS = document.getElementById("osFilter").value;
+    function renderTable() {
+      const version = document.getElementById("versionFilter").value;
+      const os = document.getElementById("osFilter").value;
 
-      const filtered = allFiles.filter(file => {
-        return (!selectedVersion || file.version === selectedVersion) &&
-               (!selectedOS || file.os === selectedOS);
+      const tbody = document.querySelector("#fileTable tbody");
+      tbody.innerHTML = "";
+
+      const filtered = fileData.filter(file => {
+        return (!version || file.version === version) &&
+               (!os || file.os === os);
       });
 
-      renderTable(filtered);
+      filtered.forEach(file => {
+        const row = document.createElement("tr");
+
+        row.innerHTML = `
+          <td>${file.name}</td>
+          <td>${file.version || "-"}</td>
+          <td>${file.os || "-"}</td>
+          <td><a href="${file.url}" class="download-link" target="_blank">Download</a></td>
+        `;
+
+        tbody.appendChild(row);
+      });
     }
 
-    document.getElementById("versionFilter").addEventListener("change", applyFilters);
-    document.getElementById("osFilter").addEventListener("change", applyFilters);
-
-    // Fetch JSON
-    fetch(JSON_URL)
-      .then(response => response.json())
-      .then(data => {
-        allFiles = data;
-        populateFilters(allFiles);
-        renderTable(allFiles);
-      })
-      .catch(error => {
-        console.error("Error fetching JSON:", error);
-        document.getElementById("error-message").style.display = "block";
-      });
+    loadJSON();
   </script>
-
 </body>
 </html>
