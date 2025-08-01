@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,228 +6,133 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>ANSYS Software Downloads</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #f9f9f9; margin: 2rem; }
-    h1 { color: #004080; }
-    .banner { background: #ffeeba; border: 1px solid #f0ad4e; padding: 10px; margin-bottom: 15px; font-weight: bold; white-space: pre-line; }
-    select, input[type="text"] { padding: 6px; margin-right: 10px; }
-    .toggle-button { display: inline-block; margin-top: 10px; }
-    .category { margin-top: 1.5rem; background: #fff; border: 1px solid #ccc; border-radius: 8px; }
-    .category h2 { margin: 0; padding: 0.75rem; background-color: #004080; color: white; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-    .category-content { display: none; padding: 1rem; }
-    .category-content ul { list-style: none; padding-left: 0; }
-    .category-content li { margin-bottom: 0.5rem; }
-    .download-link { color: #0066cc; text-decoration: none; }
-    .download-link:hover { text-decoration: underline; }
-    .download-header::before { content: "\1F4E5 "; }
-    #logBox { background: #eef; border: 1px solid #88c; padding: 1rem; margin-top: 2rem; white-space: pre-wrap; max-height: 300px; overflow-y: scroll; display: none; }
+    body { font-family: Arial, sans-serif; padding: 1rem; background-color: #f9f9f9; }
+    h1 { color: #003366; display: flex; align-items: center; gap: 0.5rem; }
+    .banner {
+      background:#e0f3ff; padding: 1rem; border-left: 5px solid #0078d4; margin: 1rem 0 1rem 0;
+    }
+    .filters { margin: 1rem 0; }
+    select { padding: 0.5rem; margin-right: 1rem; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; background: white; }
+    th, td { padding: 0.75rem; border: 1px solid #ccc; text-align: left; }
+    th { background-color: #003366; color: white; }
+    .folder-link { color: #0066cc; cursor: pointer; text-decoration: underline; }
+    #breadcrumbs { margin: 0.5rem 0; font-size: 0.9rem; }
   </style>
 </head>
 <body>
-  <h1><span class="download-header"></span>ANSYS Software Downloads</h1>
-
+  <h1><img src="https://img.icons8.com/ios-filled/24/download--v1.png" alt="Download" />ANSYS Software Downloads</h1>
   <div class="banner">
-    📌 Please select Version and OS to view categorized downloads
-    🔍 Use search to filter within selection — or switch to global search mode
+    Please choose the relevant <strong>Version</strong> and <strong>OS</strong> from the filters below to view available ANSYS software downloads.
   </div>
-
-  <div>
+  <div class="filters">
     <label for="versionFilter">Version:</label>
-    <select id="versionFilter">
-      <option value="">-- Select Version --</option>
-    </select>
-
+    <select id="versionFilter"><option value="">All</option></select>
     <label for="osFilter">OS:</label>
-    <select id="osFilter">
-      <option value="">-- Select OS --</option>
-    </select>
-
-    <label for="searchInput">Search:</label>
-    <input type="text" id="searchInput" placeholder="Search by file name" />
-
-    <div class="toggle-button">
-      Search Mode: 
-      <button onclick="setSearchMode('filtered')" id="btnFiltered">[Filtered ✅]</button>
-      <button onclick="setSearchMode('global')" id="btnGlobal">[Global ❌]</button>
-      
-    </div>
+    <select id="osFilter"><option value="">All</option></select>
   </div>
-
-  <div id="fileContainer"></div>
+  <div id="breadcrumbs"></div>
+  <table id="fileTable">
+    <thead>
+      <tr><th>Name</th><th>Action</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
   <script>
-    const JSON_URL = "https://script.google.com/macros/s/AKfycbylJt3kbvwBBf5cgILgEftSq3ohUPMD-GzEnvjqzxD3ganeTev1TtNQW9nELHrBQrMS/exec";
-    let fileData = [];
-    let searchMode = 'filtered';
+    const dataUrl = 'https://drive.google.com/uc?export=download&id=1c9U10Uc7hxW1lI6tgC_RQJgz2XqtqI32';
+    let data = {};
+    let currentPath = [];
 
-    const simpleCategories = [
-      ["Electronics", ["motorcad", "siwave", "electronic"]],
-      ["Fluids", ["fluid", "fluent", "cfx"]],
-      ["Structures", ["structure"]],
-      ["Fluids and Structures", []],
-      ["Materials", ["granta", "material"]],
-      ["Forming", ["forming"]],
-      ["Acoustics", ["sound", "sas", "asdr"]],
-      ["Optical", ["speos", "opticstudio", "zemax"]],
-      ["Discovery", ["discovery"]],
-      ["PrepPost", ["preppost"]],
-      ["Photonics", ["lumerical", "photonics"]]
-    ];
-
-            function categorize(file) {
-      const name = file.name.toLowerCase();
-      const hasFluid = name.includes("fluid") || name.includes("fluent") || name.includes("cfx");
-      const hasStructure = name.includes("structure");
-
-      if (hasFluid && hasStructure) {
-        
-        return "Fluids and Structures";
-      }
-
-      for (const [category, keywords] of simpleCategories) {
-        if (category === "Fluids and Structures") continue;
-        if (keywords.some(k => name.includes(k))) {
-          
-          return category;
-        }
-      }
-
-      
-      return "Other Tools";
-    }
-
-    async function loadJSON() {
-      try {
-        const res = await fetch(JSON_URL);
-        fileData = await res.json();
-        
-        populateFilters();
-
-        // Safely apply version and OS from URL after filters populated
-        const params = new URLSearchParams(window.location.search);
-        const versionParam = params.get("version");
-        const osParam = params.get("os");
-
-        const versionFilter = document.getElementById("versionFilter");
-        const osFilter = document.getElementById("osFilter");
-
-        const versionOptionExists = Array.from(versionFilter.options).some(o => o.value === versionParam);
-        const osOptionExists = Array.from(osFilter.options).some(o => o.value === osParam);
-
-        if (versionParam && versionOptionExists) versionFilter.value = versionParam;
-        if (osParam && osOptionExists) osFilter.value = osParam;
-
-        renderCategories();
-    
-        renderCategories();
-      } catch (err) {
-        console.error("Failed to load JSON:", err);
-        alert("Failed to load data.");
-      }
+    function fetchData() {
+      fetch(dataUrl)
+        .then(res => res.json())
+        .then(json => {
+          data = json;
+          populateFilters();
+          renderTable(data, []);
+        })
+        .catch(err => {
+          document.querySelector('#fileTable tbody').innerHTML = '<tr><td colspan="2">Failed to load data</td></tr>';
+          console.error(err);
+        });
     }
 
     function populateFilters() {
-      const versionRegex = /^20\d{2}\sR\d$/;
-      const versionSet = new Set();
+      const versions = new Set(), osList = new Set();
+      const scan = (item) => {
+        if (item.version) versions.add(item.version);
+        if (item.os) osList.add(item.os);
+        if (item.items) item.items.forEach(scan);
+      };
+      scan(data);
 
-      fileData.forEach(file => {
-        if (versionRegex.test(file.version)) versionSet.add(file.version);
+      const versionSelect = document.getElementById('versionFilter');
+      const osSelect = document.getElementById('osFilter');
+      versions.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v; opt.textContent = v;
+        versionSelect.appendChild(opt);
+      });
+      osList.forEach(o => {
+        const opt = document.createElement('option');
+        opt.value = o; opt.textContent = o;
+        osSelect.appendChild(opt);
       });
 
-      const sortedVersions = [...versionSet].sort((a, b) => b.localeCompare(a));
-      const versionFilter = document.getElementById("versionFilter");
-
-      sortedVersions.forEach(version => {
-        const opt = document.createElement("option");
-        opt.value = version;
-        opt.textContent = version;
-        versionFilter.appendChild(opt);
-      });
-
-      ["Windows", "Linux"].forEach(os => {
-        const opt = document.createElement("option");
-        opt.value = os;
-        opt.textContent = os;
-        document.getElementById("osFilter").appendChild(opt);
-      });
-
-      document.getElementById("versionFilter").addEventListener("change", renderCategories);
-      document.getElementById("osFilter").addEventListener("change", renderCategories);
-      document.getElementById("searchInput").addEventListener("input", renderCategories);
+      versionSelect.onchange = () => renderTable(data, []);
+      osSelect.onchange = () => renderTable(data, []);
     }
 
-    function setSearchMode(mode) {
-      searchMode = mode;
-      document.getElementById("btnFiltered").textContent = `[Filtered ${mode === 'filtered' ? '✅' : '❌'}]`;
-      document.getElementById("btnGlobal").textContent = `[Global ${mode === 'global' ? '✅' : '❌'}]`;
-      renderCategories();
+    function renderTable(folder, path) {
+      const version = document.getElementById('versionFilter').value;
+      const os = document.getElementById('osFilter').value;
+      const tbody = document.querySelector('#fileTable tbody');
+      const breadcrumbs = document.getElementById('breadcrumbs');
+      breadcrumbs.innerHTML = path.map((p, i) =>
+        `<span class="folder-link" onclick="navigate(${i})">${p}</span>`
+      ).join(" / ");
+
+      tbody.innerHTML = '';
+      folder.items?.forEach(item => {
+        const tr = document.createElement('tr');
+        if (item.items) {
+          const td = document.createElement('td');
+          td.colSpan = 2;
+          td.innerHTML = `<span class="folder-link" onclick="enter('${item.name}', ${JSON.stringify(path)})">📁 ${item.name}</span>`;
+          tr.appendChild(td);
+          tbody.appendChild(tr);
+        } else if ((!version || item.version === version) && (!os || item.os === os)) {
+          tr.innerHTML = `
+            <td>${item.name}</td>
+            <td>
+              <a href="${item.downloadUrl}" target="_blank">Download</a> |
+              <a href="${item.viewUrl}" target="_blank">View</a>
+            </td>`;
+          tbody.appendChild(tr);
+        }
+      });
+
+      currentPath = path;
     }
 
-    function renderCategories() {
-      const version = document.getElementById("versionFilter").value;
-      const os = document.getElementById("osFilter").value;
-      const search = document.getElementById("searchInput").value.toLowerCase();
-      const container = document.getElementById("fileContainer");
-      container.innerHTML = "";
+    function enter(name, path) {
+      let ref = data;
+      [...path, name].forEach(p => {
+        ref = ref.items.find(x => x.name === p);
+      });
+      renderTable(ref, [...path, name]);
+    }
 
-      const grouped = {};
-      simpleCategories.forEach(([cat]) => grouped[cat] = []);
-      grouped["Fluids and Structures"] = [];
-      grouped["Other Tools"] = [];
-
-      let results = fileData;
-
-      if (searchMode === 'filtered') {
-        if (!version || !os) return;
-        results = results.filter(f => f.version === version && f.os === os);
+    function navigate(level) {
+      let ref = data;
+      for (let i = 0; i <= level; i++) {
+        ref = ref.items.find(x => x.name === currentPath[i]);
       }
-
-      if (search) {
-        results = results.filter(f => f.name.toLowerCase().includes(search));
-      }
-
-      results.sort((a, b) => a.name.localeCompare(b.name));
-      results.forEach(file => {
-        const cat = categorize(file);
-        grouped[cat].push(file);
-      });
-
-      const categoryOrder = [...simpleCategories.map(([c]) => c), "Fluids and Structures", "Other Tools"];
-
-      categoryOrder.forEach(cat => {
-        const section = document.createElement("div");
-        section.className = "category";
-
-        const header = document.createElement("h2");
-        const icon = document.createElement("span");
-        icon.textContent = "➕";
-        header.innerHTML = `<span>${cat}</span>`;
-        header.appendChild(icon);
-
-        const content = document.createElement("div");
-        content.className = "category-content";
-        const list = document.createElement("ul");
-
-        grouped[cat].forEach(file => {
-          const li = document.createElement("li");
-          li.innerHTML = `<a href="${file.url}" target="_blank" class="download-link">⬇️ ${file.name}</a>`;
-          list.appendChild(li);
-        });
-
-        content.style.display = "none";
-        content.appendChild(list);
-        header.onclick = () => {
-          const isVisible = content.style.display === "block";
-          content.style.display = isVisible ? "none" : "block";
-          icon.textContent = isVisible ? "➕" : "➖";
-        };
-
-        section.appendChild(header);
-        section.appendChild(content);
-        container.appendChild(section);
-      });
+      renderTable(ref, currentPath.slice(0, level + 1));
     }
 
-    loadJSON();
+    fetchData();
   </script>
 </body>
 </html>
