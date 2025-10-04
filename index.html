@@ -8,8 +8,7 @@
     body { font-family: Arial, sans-serif; background: #f9f9f9; margin: 2rem; }
     h1 { color: #004080; }
     .banner { background: #ffeeba; border: 1px solid #f0ad4e; padding: 10px; margin-bottom: 15px; font-weight: bold; white-space: pre-line; }
-    select, input[type="text"] { padding: 6px; margin-right: 10px; }
-    .toggle-button { display: inline-block; margin-top: 10px; }
+    select { padding: 6px; margin-right: 10px; }
     .category { margin-top: 1.5rem; background: #fff; border: 1px solid #ccc; border-radius: 8px; }
     .category h2 { margin: 0; padding: 0.75rem; background-color: #004080; color: white; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
     .category-content { display: none; padding: 1rem; }
@@ -26,7 +25,6 @@
 
   <div class="banner">
     📌 Please select Version and OS to view categorized downloads
-    🔍 Use search to filter within selection — or switch to global search mode
   </div>
 
   <div>
@@ -39,200 +37,159 @@
     <select id="osFilter">
       <option value="">-- Select OS --</option>
     </select>
-
-    <label for="searchInput">Search:</label>
-    <input type="text" id="searchInput" placeholder="Search by file name" />
-
-    <div class="toggle-button">
-      Search Mode: 
-      <button onclick="setSearchMode('filtered')" id="btnFiltered">[Filtered ✅]</button>
-      <button onclick="setSearchMode('global')" id="btnGlobal">[Global ❌]</button>
-      
-    </div>
   </div>
 
   <div id="fileContainer"></div>
 
   <script>
-    const JSON_URL = "https://script.google.com/macros/s/AKfycbylJt3kbvwBBf5cgILgEftSq3ohUPMD-GzEnvjqzxD3ganeTev1TtNQW9nELHrBQrMS/exec";
-    let fileData = [];
-    let searchMode = 'filtered';
+  const JSON_URL = "https://script.google.com/macros/s/AKfycbylJt3kbvwBBf5cgILgEftSq3ohUPMD-GzEnvjqzxD3ganeTev1TtNQW9nELHrBQrMS/exec";
+  let fileData = [];
 
-    const simpleCategories = [
-      ["Electronics", ["motorcad", "siwave", "electronic"]],
-      ["Fluids", ["fluid", "fluent", "cfx"]],
-      ["Structures", ["structure"]],
-      ["Fluids and Structures", []],
-      ["Materials", ["granta", "material"]],
-      ["Forming", ["forming"]],
-      ["Acoustics", ["sound", "sas", "asdr"]],
-      ["Optical", ["speos", "opticstudio", "zemax"]],
-      ["Discovery", ["discovery"]],
-      ["PrepPost", ["preppost"]],
-      ["Photonics", ["lumerical", "photonics"]]
-    ];
+  const simpleCategories = [
+    ["Electronics", ["motorcad", "siwave", "electronic"]],
+    ["Fluids", ["fluid", "fluent", "cfx"]],
+    ["Structures", ["structure"]],
+    ["Fluids and Structures", []],
+    ["Materials", ["granta", "material"]],
+    ["Forming", ["forming"]],
+    ["Acoustics", ["sound", "sas", "asdr"]],
+    ["Optical", ["speos", "opticstudio", "zemax"]],
+    ["Discovery", ["discovery"]],
+    ["PrepPost", ["preppost"]],
+    ["Photonics", ["lumerical", "photonics"]],
+    ["Service Pack", ["sp_"]]
+  ];
 
-            function categorize(file) {
-      const name = file.name.toLowerCase();
-      const hasFluid = name.includes("fluid") || name.includes("fluent") || name.includes("cfx");
-      const hasStructure = name.includes("structure");
+  function categorize(file) {
+    const name = file.name.toLowerCase();
+    const hasFluid = name.includes("fluid") || name.includes("fluent") || name.includes("cfx");
+    const hasStructure = name.includes("structure");
 
-      if (hasFluid && hasStructure) {
-        
-        return "Fluids and Structures";
-      }
-
-      for (const [category, keywords] of simpleCategories) {
-        if (category === "Fluids and Structures") continue;
-        if (keywords.some(k => name.includes(k))) {
-          
-          return category;
-        }
-      }
-
-      
-      return "Other Tools";
+    if (hasFluid && hasStructure) {
+      return "Fluids and Structures";
     }
 
-    async function loadJSON() {
-      try {
-        const res = await fetch(JSON_URL);
-        fileData = await res.json();
-        populateFilters();
-        
-        // Final preselection at the very end
-        const versionFilter = document.getElementById("versionFilter");
-        const osFilter = document.getElementById("osFilter");
-
-        const validVersions = Array.from(versionFilter.options).map(o => o.value).filter(v => v);
-        const validOS = Array.from(osFilter.options).map(o => o.value).filter(v => v);
-
-        if (validVersions.length) versionFilter.value = validVersions[0];
-        if (validOS.length) osFilter.value = validOS[0];
-
-        renderCategories();
-    
-      } catch (err) {
-        console.error("Failed to load JSON:", err);
-        alert("Failed to load data.");
+    for (const [category, keywords] of simpleCategories) {
+      if (category === "Fluids and Structures") continue;
+      if (keywords.some(k => name.includes(k))) {
+        return category;
       }
     }
 
-    function populateFilters() {
-      const versionRegex = /^20\d{2}\sR\d$/;
-      const versionSet = new Set();
+    return "Other Tools";
+  }
 
-      fileData.forEach(file => {
-        if (versionRegex.test(file.version)) versionSet.add(file.version);
-      });
+  async function loadJSON() {
+    try {
+      const res = await fetch(JSON_URL);
+      fileData = await res.json();
+      populateFilters();
 
-      const sortedVersions = [...versionSet].sort((a, b) => b.localeCompare(a));
       const versionFilter = document.getElementById("versionFilter");
+      const osFilter = document.getElementById("osFilter");
 
-      sortedVersions.forEach(version => {
-        const opt = document.createElement("option");
-        opt.value = version;
-        opt.textContent = version;
-        versionFilter.appendChild(opt);
-      });
+      const validVersions = Array.from(versionFilter.options).map(o => o.value).filter(v => v);
+      const validOS = Array.from(osFilter.options).map(o => o.value).filter(v => v);
 
-      ["Windows", "Linux"].forEach(os => {
-        const opt = document.createElement("option");
-        opt.value = os;
-        opt.textContent = os;
-        document.getElementById("osFilter").appendChild(opt);
-      });
+      if (validVersions.length) versionFilter.value = validVersions[0];
+      if (validOS.length) osFilter.value = validOS[0];
 
-      document.getElementById("versionFilter").addEventListener("change", renderCategories);
-      document.getElementById("osFilter").addEventListener("change", renderCategories);
-      document.getElementById("searchInput").addEventListener("input", renderCategories);
+      renderCategories();
+    } catch (err) {
+      console.error("Failed to load JSON:", err);
+      alert("Failed to load data.");
     }
+  }
 
-    function setSearchMode(mode) {
-      searchMode = mode;
-      document.getElementById("btnFiltered").textContent = `[Filtered ${mode === 'filtered' ? '✅' : '❌'}]`;
-      document.getElementById("btnGlobal").textContent = `[Global ${mode === 'global' ? '✅' : '❌'}]`;
-      
-        // Final preselection at the very end
-        const versionFilter = document.getElementById("versionFilter");
-        const osFilter = document.getElementById("osFilter");
+  function populateFilters() {
+    const versionRegex = /^20\d{2}\sR\d$/;
+    const versionSet = new Set();
 
-        const validVersions = Array.from(versionFilter.options).map(o => o.value).filter(v => v);
-        const validOS = Array.from(osFilter.options).map(o => o.value).filter(v => v);
+    fileData.forEach(file => {
+      if (versionRegex.test(file.version)) versionSet.add(file.version);
+    });
 
-        if (validVersions.length) versionFilter.value = validVersions[0];
-        if (validOS.length) osFilter.value = validOS[0];
+    const sortedVersions = [...versionSet].sort((a, b) => b.localeCompare(a));
+    const versionFilter = document.getElementById("versionFilter");
 
-        renderCategories();
-    
-    }
+    sortedVersions.forEach(version => {
+      const opt = document.createElement("option");
+      opt.value = version;
+      opt.textContent = version;
+      versionFilter.appendChild(opt);
+    });
 
-    function renderCategories() {
-      const version = document.getElementById("versionFilter").value;
-      const os = document.getElementById("osFilter").value;
-      const search = document.getElementById("searchInput").value.toLowerCase();
-      const container = document.getElementById("fileContainer");
-      container.innerHTML = "";
+    ["Windows", "Linux"].forEach(os => {
+      const opt = document.createElement("option");
+      opt.value = os;
+      opt.textContent = os;
+      document.getElementById("osFilter").appendChild(opt);
+    });
 
-      const grouped = {};
-      simpleCategories.forEach(([cat]) => grouped[cat] = []);
-      grouped["Fluids and Structures"] = [];
-      grouped["Other Tools"] = [];
+    document.getElementById("versionFilter").addEventListener("change", renderCategories);
+    document.getElementById("osFilter").addEventListener("change", renderCategories);
+  }
 
-      let results = fileData;
+  function renderCategories() {
+    const version = document.getElementById("versionFilter").value;
+    const os = document.getElementById("osFilter").value;
+    const container = document.getElementById("fileContainer");
+    container.innerHTML = "";
 
-      if (searchMode === 'filtered') {
-        if (!version || !os) return;
-        results = results.filter(f => f.version === version && f.os === os);
-      }
+    if (!version || !os) return;
 
-      if (search) {
-        results = results.filter(f => f.name.toLowerCase().includes(search));
-      }
+    // Filter files based on selected Version & OS
+    let results = fileData.filter(f => f.version === version && f.os === os);
 
-      results.sort((a, b) => a.name.localeCompare(b.name));
-      results.forEach(file => {
-        const cat = categorize(file);
-        grouped[cat].push(file);
+    const grouped = {};
+    simpleCategories.forEach(([cat]) => grouped[cat] = []);
+    grouped["Other Tools"] = [];
+
+    results.sort((a, b) => a.name.localeCompare(b.name));
+    results.forEach(file => {
+      const cat = categorize(file);
+      grouped[cat].push(file);
+    });
+
+    const categoryOrder = [...simpleCategories.map(([c]) => c), "Other Tools"];
+
+    categoryOrder.forEach(cat => {
+      if (grouped[cat].length === 0) return; // skip empty categories
+
+      const section = document.createElement("div");
+      section.className = "category";
+
+      const header = document.createElement("h2");
+      const icon = document.createElement("span");
+      icon.textContent = "➕";
+      header.innerHTML = `<span>${cat}</span>`;
+      header.appendChild(icon);
+
+      const content = document.createElement("div");
+      content.className = "category-content";
+      const list = document.createElement("ul");
+
+      grouped[cat].forEach(file => {
+        const li = document.createElement("li");
+        li.innerHTML = `<a href="${file.url}" target="_blank" class="download-link">⬇️ ${file.name}</a>`;
+        list.appendChild(li);
       });
 
-      const categoryOrder = [...simpleCategories.map(([c]) => c), "Fluids and Structures", "Other Tools"];
+      content.style.display = "none";
+      content.appendChild(list);
+      header.onclick = () => {
+        const isVisible = content.style.display === "block";
+        content.style.display = isVisible ? "none" : "block";
+        icon.textContent = isVisible ? "➕" : "➖";
+      };
 
-      categoryOrder.forEach(cat => {
-        const section = document.createElement("div");
-        section.className = "category";
+      section.appendChild(header);
+      section.appendChild(content);
+      container.appendChild(section);
+    });
+  }
 
-        const header = document.createElement("h2");
-        const icon = document.createElement("span");
-        icon.textContent = "➕";
-        header.innerHTML = `<span>${cat}</span>`;
-        header.appendChild(icon);
-
-        const content = document.createElement("div");
-        content.className = "category-content";
-        const list = document.createElement("ul");
-
-        grouped[cat].forEach(file => {
-          const li = document.createElement("li");
-          li.innerHTML = `<a href="${file.url}" target="_blank" class="download-link">⬇️ ${file.name}</a>`;
-          list.appendChild(li);
-        });
-
-        content.style.display = "none";
-        content.appendChild(list);
-        header.onclick = () => {
-          const isVisible = content.style.display === "block";
-          content.style.display = isVisible ? "none" : "block";
-          icon.textContent = isVisible ? "➕" : "➖";
-        };
-
-        section.appendChild(header);
-        section.appendChild(content);
-        container.appendChild(section);
-      });
-    }
-
-    loadJSON();
+  loadJSON();
   </script>
 </body>
 </html>
