@@ -34,7 +34,7 @@ flowchart TD
   - Displays a searchable and filterable table by `Version` and `OS`
   - Provides download links to files hosted in Drive
 
-### 4. **SharePoint**
+### 4. **Google sites / SharePoint**
 - Embeds the GitHub Pages site in an iframe
 - Acts as the public-facing user interface
 
