@@ -13,7 +13,7 @@ flowchart TD
   B -->|Daily JSON Update| C[Drive JSON File]
   C -->|Served by| D[Google Apps Script - Web App]
   D -->|Fetch JSON| E[GitHub Pages HTML]
-  E -->|iframe| F[SharePoint Page]
+  E -->|iframe| F[Google Sites / SharePoint Page]
 ```
 
 ---
